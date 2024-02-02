@@ -1,42 +1,102 @@
-import { Suspense } from 'react';
+import { Suspense, useState } from 'react';
 import {
-  PreloadedQuery,
   RelayEnvironmentProvider,
-  loadQuery,
+  useMutation,
   usePreloadedQuery,
-} from 'react-relay/hooks';
+  useQueryLoader,
+} from 'react-relay';
 import graphql from 'babel-plugin-relay/macro';
 
 import './App.css';
-import RelayEnvironment from './RelayEnvironment';
+import { initRelayEnvironment } from './RelayEnvironment';
+import { useAsyncResource } from 'use-async-resource';
+import { readPersistedStore } from './persistedStore';
 
 // Define a query
-const RepositoryNameQuery = graphql`
-  query AppRepositoryNameQuery {
-    repository(owner: "facebook", name: "relay") {
-      name
-      owner {
-        id
-      }
+const GetPostQuery = graphql`
+  query AppGetPostQuery($id: ID!) {
+    Post(id: $id) {
+      id
+      title
+      views
+      user_id
     }
   }
 `;
 
-// Immediately load the query as our app starts. For a real app, we'd move this
-// into our routing configuration, preloading data as we transition to new routes.
-const preloadedQuery = loadQuery(RelayEnvironment, RepositoryNameQuery, {
-  /* query variables */
-});
+const RandomizePostTitleMutation = graphql`
+  mutation AppRandomizePostTitleMutation($id: ID!, $title: String!) {
+    updatePost(id: $id, title: $title) {
+      id
+      title
+      views
+      user_id
+    }
+  }
+`;
 
-function App(props: { preloadedQuery: PreloadedQuery<any> }) {
-  const data = usePreloadedQuery(RepositoryNameQuery, props.preloadedQuery);
+function CodeViewer({ queryReference }) {
+  const data = usePreloadedQuery(GetPostQuery, queryReference);
+
+  return (
+    <pre style={{ textAlign: 'left' }}>
+      <code>{JSON.stringify(data, null, 2)}</code>
+    </pre>
+  );
+}
+
+function App() {
+  const [id, setId] = useState(1);
+  const [queryRef, loadQuery] = useQueryLoader(GetPostQuery);
+
+  const [randomizeTitleMutation] = useMutation(RandomizePostTitleMutation);
+
+  const randomizeTitle = () => {
+    randomizeTitleMutation({
+      variables: {
+        id,
+        title: 'Random title ' + Math.random(),
+      },
+    });
+  };
 
   return (
     <div>
-      <pre style={{ textAlign: 'left' }}>
-        <code>{JSON.stringify(data, null, 2)}</code>
-      </pre>
+      <input
+        placeholder="id"
+        value={id}
+        type="number"
+        onChange={(e) => setId(parseInt(e.target.value, 10))}
+      />
+      <button onClick={() => loadQuery({ id })}>Load</button>
+      <button onClick={randomizeTitle}>Randomize title</button>
+      <div>
+        <Suspense fallback={'Loading...'}>
+          {queryRef ? (
+            <CodeViewer queryReference={queryRef} />
+          ) : (
+            <p>Press button to load</p>
+          )}
+        </Suspense>
+      </div>
     </div>
+  );
+}
+
+function RelayEnvironmentProviderLoader({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const [usePersistedStore] = useAsyncResource(readPersistedStore, []);
+  const persistedStore = usePersistedStore();
+
+  return (
+    <RelayEnvironmentProvider
+      environment={initRelayEnvironment(persistedStore)}
+    >
+      {children}
+    </RelayEnvironmentProvider>
   );
 }
 
@@ -47,11 +107,11 @@ function App(props: { preloadedQuery: PreloadedQuery<any> }) {
 // - <Suspense> specifies a fallback in case a child suspends.
 function AppRoot() {
   return (
-    <RelayEnvironmentProvider environment={RelayEnvironment}>
-      <Suspense fallback={'Loading...'}>
-        <App preloadedQuery={preloadedQuery} />
-      </Suspense>
-    </RelayEnvironmentProvider>
+    <Suspense fallback={'Loading...'}>
+      <RelayEnvironmentProviderLoader>
+        <App />
+      </RelayEnvironmentProviderLoader>
+    </Suspense>
   );
 }
 
