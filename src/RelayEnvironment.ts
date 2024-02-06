@@ -25,7 +25,7 @@ async function fetchRelay(
 }
 
 export function initRelayEnvironment(records: RecordMap) {
-  const source = new CrossTabRecordSource(records);
+  const source = new RecordSource(records);
   const store = new CrossTabStore(source);
   const environment = new Environment({
     network: Network.create(fetchRelay),
@@ -76,7 +76,7 @@ export function initRelayEnvironment(records: RecordMap) {
       }
       case 'publish': {
         if (jsonSource != null) {
-          store.publish(new CrossTabRecordSource(jsonSource), invalidateStore);
+          store.publish(new RecordSource(jsonSource), invalidateStore);
         }
         break;
       }
