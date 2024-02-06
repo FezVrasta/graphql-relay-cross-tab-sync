@@ -1,10 +1,4 @@
-import {
-  Environment,
-  Network,
-  applyOptimisticMutation,
-  commitLocalUpdate,
-  commitMutation,
-} from 'relay-runtime';
+import { Environment, Network, RecordSource } from 'relay-runtime';
 import type { FetchFunction, Store } from 'relay-runtime';
 import { fetchGraphQL } from './fetchGraphQL';
 import { CrossTabRecordSource } from './CrossTabRecordSource';
@@ -36,16 +30,18 @@ export function initRelayEnvironment(records: RecordMap) {
   const environment = new Environment({
     network: Network.create(fetchRelay),
     store,
+    log: (...args) => console.log('Relay log:', ...args),
   });
 
   store.broadcastChannel.onmessage = async (event) => {
     if (notifyListenerPaused.value) return;
 
-    const { operation, sourceOperation, invalidateStore } = event.data as {
-      operation: string;
-      sourceOperation: Parameters<Store['notify']>[0];
-      invalidateStore: Parameters<Store['notify']>[1];
-    };
+    const { operation, sourceOperation, invalidateStore, jsonSource } =
+      event.data as {
+        operation: string;
+        sourceOperation: Parameters<Store['notify']>[0];
+        invalidateStore: Parameters<Store['notify']>[1];
+      };
     switch (operation) {
       case 'notify': {
         notifyBroadcasterPaused.value = true;
@@ -72,8 +68,16 @@ export function initRelayEnvironment(records: RecordMap) {
               updatePost: payload,
             });
           }
+
+          store.notify(sourceOperation, invalidateStore);
         }
 
+        break;
+      }
+      case 'publish': {
+        if (jsonSource != null) {
+          store.publish(new CrossTabRecordSource(jsonSource), invalidateStore);
+        }
         break;
       }
     }

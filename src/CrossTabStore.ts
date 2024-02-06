@@ -37,4 +37,16 @@ export class CrossTabStore extends Store {
 
     return super.notify(sourceOperation, invalidateStore);
   }
+
+  publish(
+    source: Parameters<Store['publish']>[0],
+    data: Parameters<Store['publish']>[1]
+  ): ReturnType<Store['publish']> {
+    this.broadcastChannel.postMessage({
+      operation: 'publish',
+      jsonSource: source.toJSON(),
+    });
+
+    return super.publish(source, data);
+  }
 }
