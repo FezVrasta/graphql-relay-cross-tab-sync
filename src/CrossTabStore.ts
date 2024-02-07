@@ -25,7 +25,7 @@ export class CrossTabStore extends Store {
     clearTimeout(this.notifyListenerTimeout);
     this.notifyListenerTimeout = setTimeout(() => {
       notifyListenerPaused.value = false;
-    }, 2000);
+    }, 100);
 
     if (!notifyBroadcasterPaused.value) {
       this.broadcastChannel.postMessage({

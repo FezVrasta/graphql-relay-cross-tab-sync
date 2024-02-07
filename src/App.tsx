@@ -8,7 +8,7 @@ import {
 import graphql from 'babel-plugin-relay/macro';
 
 import './App.css';
-import { environment, initRelayEnvironment } from './RelayEnvironment';
+import { initRelayEnvironment } from './RelayEnvironment';
 import { useAsyncResource } from 'use-async-resource';
 import { readPersistedStore } from './persistedStore';
 
@@ -88,8 +88,13 @@ function RelayEnvironmentProviderLoader({
 }: {
   children: React.ReactNode;
 }) {
+  const [usePersistedStore] = useAsyncResource(readPersistedStore, []);
+  const persistedStore = usePersistedStore();
+
   return (
-    <RelayEnvironmentProvider environment={environment}>
+    <RelayEnvironmentProvider
+      environment={initRelayEnvironment(persistedStore)}
+    >
       {children}
     </RelayEnvironmentProvider>
   );
