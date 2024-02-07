@@ -34,11 +34,6 @@ export function initRelayEnvironment(initialSource: RecordMap): Environment {
     store,
   });
 
-  console.log({
-    source,
-    store,
-    environment,
-  });
   store.broadcastChannel.onmessage = async (event) => {
     const {
       operation,

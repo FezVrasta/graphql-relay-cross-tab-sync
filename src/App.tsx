@@ -35,7 +35,11 @@ const RandomizePostTitleMutation = graphql`
   }
 `;
 
-function CodeViewer({ queryReference }) {
+function CodeViewer({
+  queryReference,
+}: {
+  queryReference: Parameters<typeof usePreloadedQuery>[1];
+}) {
   const data = usePreloadedQuery(GetPostQuery, queryReference);
 
   return (
