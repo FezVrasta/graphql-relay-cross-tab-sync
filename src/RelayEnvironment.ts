@@ -24,54 +24,50 @@ async function fetchRelay(
   return fetchGraphQL(params.text, variables);
 }
 
-export function initRelayEnvironment(records: RecordMap) {
-  const source = new RecordSource(records);
-  const store = new CrossTabStore(source);
-  const environment = new Environment({
-    network: Network.create(fetchRelay),
-    store,
-  });
+const source = new RecordSource();
+const store = new CrossTabStore(source);
+export const environment = new Environment({
+  network: Network.create(fetchRelay),
+  store,
+});
 
-  console.log({
-    source,
-    store,
-    environment,
-  });
-  store.broadcastChannel.onmessage = async (event) => {
-    if (notifyListenerPaused.value) return;
+console.log({
+  source,
+  store,
+  environment,
+});
+store.broadcastChannel.onmessage = async (event) => {
+  if (notifyListenerPaused.value) return;
 
-    const {
-      operation,
-      sourceOperation,
-      invalidateStore,
-      jsonSource,
-      idsMarkedForInvalidation,
-    } = event.data as {
-      operation: string;
-      sourceOperation: Parameters<Store['notify']>[0];
-      invalidateStore: Parameters<Store['notify']>[1];
-    };
-    switch (operation) {
-      case 'notify': {
-        notifyBroadcasterPaused.value = true;
-        setTimeout(() => {
-          notifyBroadcasterPaused.value = false;
-        }, 2000);
-
-        if (sourceOperation != null) {
-          store.notify();
-        }
-
-        break;
-      }
-      case 'publish': {
-        if (jsonSource != null) {
-          store.publish(new RecordSource(jsonSource), idsMarkedForInvalidation);
-        }
-        break;
-      }
-    }
+  const {
+    operation,
+    sourceOperation,
+    invalidateStore,
+    jsonSource,
+    idsMarkedForInvalidation,
+  } = event.data as {
+    operation: string;
+    sourceOperation: Parameters<Store['notify']>[0];
+    invalidateStore: Parameters<Store['notify']>[1];
   };
+  switch (operation) {
+    case 'notify': {
+      notifyBroadcasterPaused.value = true;
+      setTimeout(() => {
+        notifyBroadcasterPaused.value = false;
+      }, 2000);
 
-  return environment;
-}
+      if (sourceOperation != null) {
+        store.notify();
+      }
+
+      break;
+    }
+    case 'publish': {
+      if (jsonSource != null) {
+        store.publish(new RecordSource(jsonSource), idsMarkedForInvalidation);
+      }
+      break;
+    }
+  }
+};
