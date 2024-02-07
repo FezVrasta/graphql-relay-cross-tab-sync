@@ -2,7 +2,7 @@ import { Environment, Network, RecordSource } from 'relay-runtime';
 import type { FetchFunction, Store } from 'relay-runtime';
 import { fetchGraphQL } from './fetchGraphQL';
 import { RecordMap } from 'relay-runtime/lib/store/RelayStoreTypes';
-import { CrossTabStore, notifyListenerPaused } from './CrossTabStore';
+import { CrossTabStore } from './CrossTabStore';
 import { PersistentRecordSource } from './PersistentRecordSource';
 
 // Relay passes a "params" object with the query name and text. So we define a helper function
@@ -40,8 +40,6 @@ export function initRelayEnvironment(initialSource: RecordMap): Environment {
     environment,
   });
   store.broadcastChannel.onmessage = async (event) => {
-    if (notifyListenerPaused.value) return;
-
     const {
       operation,
       sourceOperation,
@@ -58,14 +56,17 @@ export function initRelayEnvironment(initialSource: RecordMap): Environment {
     switch (operation) {
       case 'notify': {
         if (sourceOperation != null) {
-          store.notify(sourceOperation, invalidateStore);
+          store.localNotify(sourceOperation, invalidateStore);
         }
 
         break;
       }
       case 'publish': {
         if (jsonSource != null) {
-          store.publish(new RecordSource(jsonSource), idsMarkedForInvalidation);
+          store.localPublish(
+            new RecordSource(jsonSource),
+            idsMarkedForInvalidation
+          );
         }
         break;
       }

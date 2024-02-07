@@ -1,8 +1,5 @@
 import { Store } from 'relay-runtime';
 
-export const notifyListenerPaused = { value: false };
-export const notifyBroadcasterPaused = { value: false };
-
 export class CrossTabStore extends Store {
   broadcastChannel: BroadcastChannel;
 
@@ -14,27 +11,23 @@ export class CrossTabStore extends Store {
     this.broadcastChannel = new BroadcastChannel('relay-cross-tab-store');
   }
 
-  notifyListenerTimeout: number | undefined;
-
   notify(
     sourceOperation?: Parameters<Store['notify']>[0],
     invalidateStore?: Parameters<Store['notify']>[1]
   ): ReturnType<Store['notify']> {
-    notifyListenerPaused.value = true;
+    this.broadcastChannel.postMessage({
+      operation: 'notify',
+      sourceOperation,
+      invalidateStore,
+    });
 
-    clearTimeout(this.notifyListenerTimeout);
-    this.notifyListenerTimeout = setTimeout(() => {
-      notifyListenerPaused.value = false;
-    }, 100);
+    return this.localNotify(sourceOperation, invalidateStore);
+  }
 
-    if (!notifyBroadcasterPaused.value) {
-      this.broadcastChannel.postMessage({
-        operation: 'notify',
-        sourceOperation,
-        invalidateStore,
-      });
-    }
-
+  localNotify(
+    sourceOperation?: Parameters<Store['notify']>[0],
+    invalidateStore?: Parameters<Store['notify']>[1]
+  ): ReturnType<Store['notify']> {
     return super.notify(sourceOperation, invalidateStore);
   }
 
@@ -47,8 +40,13 @@ export class CrossTabStore extends Store {
       jsonSource: source.toJSON(),
     });
 
-    console.log(source.toJSON(), idsMarkedForInvalidation);
+    return this.localPublish(source, idsMarkedForInvalidation);
+  }
 
+  localPublish(
+    source: Parameters<Store['publish']>[0],
+    idsMarkedForInvalidation?: Parameters<Store['publish']>[1]
+  ): ReturnType<Store['publish']> {
     return super.publish(source, idsMarkedForInvalidation);
   }
 }
