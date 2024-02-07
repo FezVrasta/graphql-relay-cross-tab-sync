@@ -30,18 +30,27 @@ export function initRelayEnvironment(records: RecordMap) {
   const environment = new Environment({
     network: Network.create(fetchRelay),
     store,
-    log: (...args) => console.log('Relay log:', ...args),
   });
 
+  console.log({
+    source,
+    store,
+    environment,
+  });
   store.broadcastChannel.onmessage = async (event) => {
     if (notifyListenerPaused.value) return;
 
-    const { operation, sourceOperation, invalidateStore, jsonSource } =
-      event.data as {
-        operation: string;
-        sourceOperation: Parameters<Store['notify']>[0];
-        invalidateStore: Parameters<Store['notify']>[1];
-      };
+    const {
+      operation,
+      sourceOperation,
+      invalidateStore,
+      jsonSource,
+      idsMarkedForInvalidation,
+    } = event.data as {
+      operation: string;
+      sourceOperation: Parameters<Store['notify']>[0];
+      invalidateStore: Parameters<Store['notify']>[1];
+    };
     switch (operation) {
       case 'notify': {
         notifyBroadcasterPaused.value = true;
@@ -50,33 +59,14 @@ export function initRelayEnvironment(records: RecordMap) {
         }, 2000);
 
         if (sourceOperation != null) {
-          // applyOptimisticMutation(environment, {
-          //   mutation: sourceOperation.request.node,
-          //   variables: sourceOperation.request.variables,
-          // });
-
-          const data = source.get(sourceOperation.fragment.dataID);
-          if (data) {
-            const ref =
-              Object.values(data)[Object.keys(data).length - 1]?.__ref;
-            const payload = source.get(ref);
-            console.log(ref, payload);
-
-            console.log(sourceOperation, data);
-
-            environment.commitPayload(sourceOperation, {
-              updatePost: payload,
-            });
-          }
-
-          store.notify(sourceOperation, invalidateStore);
+          store.notify();
         }
 
         break;
       }
       case 'publish': {
         if (jsonSource != null) {
-          store.publish(new RecordSource(jsonSource), invalidateStore);
+          store.publish(new RecordSource(jsonSource), idsMarkedForInvalidation);
         }
         break;
       }

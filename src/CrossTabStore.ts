@@ -40,13 +40,15 @@ export class CrossTabStore extends Store {
 
   publish(
     source: Parameters<Store['publish']>[0],
-    data: Parameters<Store['publish']>[1]
+    idsMarkedForInvalidation?: Parameters<Store['publish']>[1]
   ): ReturnType<Store['publish']> {
     this.broadcastChannel.postMessage({
       operation: 'publish',
       jsonSource: source.toJSON(),
     });
 
-    return super.publish(source, data);
+    console.log(source.toJSON(), idsMarkedForInvalidation);
+
+    return super.publish(source, idsMarkedForInvalidation);
   }
 }
