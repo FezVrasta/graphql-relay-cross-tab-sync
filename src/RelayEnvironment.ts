@@ -1,4 +1,4 @@
-import { Environment, Network, RecordSource } from 'relay-runtime';
+import { Environment, Network } from 'relay-runtime';
 import type { FetchFunction, Store } from 'relay-runtime';
 import { fetchGraphQL } from './fetchGraphQL';
 import { RecordMap } from 'relay-runtime/lib/store/RelayStoreTypes';
@@ -20,58 +20,47 @@ async function fetchRelay(
   return fetchGraphQL(params.text, variables);
 }
 
-let environment: Environment | null = null;
+const source = new PersistentRecordSource();
 
-export function initRelayEnvironment(initialSource: RecordMap): Environment {
-  if (environment != null) {
-    return environment;
-  }
+const store = new CrossTabStore(source);
 
-  const source = new PersistentRecordSource(initialSource);
+export const environment = new Environment({
+  network: Network.create(fetchRelay),
+  store,
+});
 
-  const store = new CrossTabStore(source, {
-    // We set it to 1 to demo the GC behavior. In a real app, you would set it to a higher value.
-    gcReleaseBufferSize: 1,
-  });
-
-  environment = new Environment({
-    network: Network.create(fetchRelay),
-    store,
-  });
-
-  store.broadcastChannel.onmessage = async (event) => {
-    const {
-      operation,
-      sourceOperation,
-      invalidateStore,
-      jsonSource,
-      idsMarkedForInvalidation,
-    } = event.data as {
-      operation: string;
-      sourceOperation: Parameters<Store['notify']>[0];
-      invalidateStore: Parameters<Store['notify']>[1];
-      jsonSource: RecordMap;
-      idsMarkedForInvalidation: Parameters<Store['publish']>[1];
-    };
-    switch (operation) {
-      case 'notify': {
-        if (sourceOperation != null) {
-          store.localNotify(sourceOperation, invalidateStore);
-        }
-
-        break;
-      }
-      case 'publish': {
-        if (jsonSource != null) {
-          store.localPublish(
-            new RecordSource(jsonSource),
-            idsMarkedForInvalidation
-          );
-        }
-        break;
-      }
-    }
+store.broadcastChannel.onmessage = async (event) => {
+  const {
+    operation,
+    sourceOperation,
+    invalidateStore,
+    jsonSource,
+    idsMarkedForInvalidation,
+  } = event.data as {
+    operation: string;
+    sourceOperation: Parameters<Store['notify']>[0];
+    invalidateStore: Parameters<Store['notify']>[1];
+    jsonSource: RecordMap;
+    idsMarkedForInvalidation: Parameters<Store['publish']>[1];
   };
+  switch (operation) {
+    case 'notify': {
+      if (sourceOperation != null) {
+        store.localNotify(sourceOperation, invalidateStore);
+      }
 
-  return environment;
-}
+      break;
+    }
+    case 'publish': {
+      if (jsonSource != null) {
+        store.localPublish(
+          new PersistentRecordSource(jsonSource),
+          idsMarkedForInvalidation
+        );
+      }
+      break;
+    }
+  }
+};
+
+await source.hydrate();

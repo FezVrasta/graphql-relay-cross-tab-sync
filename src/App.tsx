@@ -10,9 +10,8 @@ import {
 import graphql from 'babel-plugin-relay/macro';
 
 import './App.css';
-import { initRelayEnvironment } from './RelayEnvironment';
-import { useAsyncResource } from 'use-async-resource';
-import { readPersistedStore } from './persistedStore';
+import { environment } from './RelayEnvironment';
+import { useHydrateStore } from './PersistentRecordSource';
 
 // Define a query
 const GetPostQuery = graphql`
@@ -69,6 +68,7 @@ const PreloadButton = ({ id }: { id: number }) => {
 };
 
 function App() {
+  useHydrateStore();
   const [id, setId] = useState(1);
 
   const [queryRef, loadQuery] = useQueryLoader(GetPostQuery);
@@ -127,13 +127,8 @@ function RelayEnvironmentProviderLoader({
 }: {
   children: React.ReactNode;
 }) {
-  const [usePersistedStore] = useAsyncResource(readPersistedStore, []);
-  const persistedStore = usePersistedStore();
-
   return (
-    <RelayEnvironmentProvider
-      environment={initRelayEnvironment(persistedStore)}
-    >
+    <RelayEnvironmentProvider environment={environment}>
       {children}
     </RelayEnvironmentProvider>
   );

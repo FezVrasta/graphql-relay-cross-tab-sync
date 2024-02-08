@@ -3,7 +3,7 @@ export async function fetchGraphQL(
   variables: Record<string, unknown>
 ) {
   // Fetch data from GitHub's GraphQL API:
-  const response = await fetch('http://localhost:3000', {
+  const response = await fetch('http://localhost:3000/graphql', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
