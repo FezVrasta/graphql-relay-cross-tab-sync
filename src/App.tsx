@@ -1,9 +1,11 @@
 import { Suspense, useState } from 'react';
 import {
   RelayEnvironmentProvider,
+  loadQuery as loadQueryRelay,
   useMutation,
   usePreloadedQuery,
   useQueryLoader,
+  useRelayEnvironment,
 } from 'react-relay';
 import graphql from 'babel-plugin-relay/macro';
 
@@ -35,6 +37,14 @@ const RandomizePostTitleMutation = graphql`
   }
 `;
 
+const DeletePostMutation = graphql`
+  mutation AppDeletePostMutation($id: ID!) {
+    removePost(id: $id) {
+      id @deleteRecord
+    }
+  }
+`;
+
 function CodeViewer({
   queryReference,
 }: {
@@ -49,8 +59,18 @@ function CodeViewer({
   );
 }
 
+const PreloadButton = ({ id }: { id: number }) => {
+  const environment = useRelayEnvironment();
+  const preload = (variables: { id: number }) => {
+    loadQueryRelay(environment, GetPostQuery, variables);
+  };
+
+  return <button onClick={() => preload({ id })}>Preload</button>;
+};
+
 function App() {
   const [id, setId] = useState(1);
+
   const [queryRef, loadQuery] = useQueryLoader(GetPostQuery);
 
   const [randomizeTitleMutation] = useMutation(RandomizePostTitleMutation);
@@ -64,16 +84,31 @@ function App() {
     });
   };
 
+  const [deleteMutation] = useMutation(DeletePostMutation);
+
+  const deletePost = () => {
+    deleteMutation({
+      variables: {
+        id,
+      },
+    });
+  };
+
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <input
         placeholder="id"
         value={id}
         type="number"
         onChange={(e) => setId(parseInt(e.target.value, 10))}
       />
-      <button onClick={() => loadQuery({ id })}>Load</button>
-      <button onClick={randomizeTitle}>Randomize title</button>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <PreloadButton id={id} />
+        <button onClick={() => loadQuery({ id })}>Load</button>
+        <button onClick={randomizeTitle}>Randomize title</button>
+        <button onClick={deletePost}>Delete</button>
+      </div>
+
       <div>
         <Suspense fallback={'Loading...'}>
           {queryRef ? (

@@ -28,7 +28,12 @@ export function initRelayEnvironment(initialSource: RecordMap): Environment {
   }
 
   const source = new PersistentRecordSource(initialSource);
-  const store = new CrossTabStore(source);
+
+  const store = new CrossTabStore(source, {
+    // We set it to 1 to demo the GC behavior. In a real app, you would set it to a higher value.
+    gcReleaseBufferSize: 1,
+  });
+
   environment = new Environment({
     network: Network.create(fetchRelay),
     store,
