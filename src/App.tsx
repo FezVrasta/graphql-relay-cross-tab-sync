@@ -1,13 +1,13 @@
 import { Suspense, useState } from 'react';
 import {
   RelayEnvironmentProvider,
+  graphql,
   loadQuery as loadQueryRelay,
   useMutation,
   usePreloadedQuery,
   useQueryLoader,
   useRelayEnvironment,
 } from 'react-relay';
-import graphql from 'babel-plugin-relay/macro';
 
 import './App.css';
 import { environment } from './RelayEnvironment';
